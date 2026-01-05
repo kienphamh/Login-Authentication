@@ -1,2 +1,2 @@
 # Login-Authentication
-A simple login authenticaiton program written in C++
+A simple login authentication program written in C++
