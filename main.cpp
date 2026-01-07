@@ -18,17 +18,35 @@ void handlEscape() {throw escapeException();}
 bool emailValidation(std::string &email)
 {
     size_t pos = email.find('@');
-
+    if (email.length() > 254) return false;
+    // No @
     if (pos == std::string::npos) return false;
-    if (email.find('a', pos + 1) != std::string::npos) return false;
+    // Local part > 64
+    if (pos == 0 || pos > 64) std::cerr << "Local part is too long." << std::endl; return false;
+    // no consecutive dots anywhere
     if (email.find("..") != std::string::npos) return false;
     if (email.empty()) return false;
 
-    std::string afterAt = email.substr(pos + 1);
+    std::string domain = email.substr(pos + 1);
 
-    if (afterAt.find('.') == std::string::npos) return false;
+    if (domain.find('.') == std::string::npos) return false;
+    // no repetition of @
+    if (domain.find('@') != std::string::npos) return false;
+    if (domain.empty() || domain.length() > 253) return false;
+    // Contain at least 1 dot
+    if (domain.find('.') == std::string::npos) return false;
+    if (domain.front() == '.' || domain.back() == '.') return false;
+    if (domain.front() == '-' || domain.front() == '-') return false;
 
+    size_t lastDot = domain.find_last_not_of('.');
+    std::string tld = domain.substr(lastDot + 1);
+    if (tld.length() < 2) return false;
     return true;
+}
+
+bool userValidation(std::string &user)
+{
+    
 }
 
 bool Register()
@@ -53,13 +71,16 @@ bool Register()
             if (!emailValidation(email)) std::cerr << "Invalid email address." << std::endl;
             else break;
         }
+
+        while (true)
+        {
+
+        }
     }
     catch(const std::exception& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error with the email address" << e.what() << '\n';
     }
-    
-
 }
 
 void login()
