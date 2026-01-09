@@ -1,8 +1,10 @@
 #include <algorithm>
 #include "bcrypt/BCrypt.hpp"
-#include <iostream>
-#include <limits.h>
+#include <cctype>
 #include <fstream>
+#include <iostream>
+
+
 
 std::string trim(std::string &s)
 {
@@ -22,31 +24,48 @@ bool emailValidation(std::string &email)
     // No @
     if (pos == std::string::npos) return false;
     // Local part > 64
-    if (pos == 0 || pos > 64) std::cerr << "Local part is too long." << std::endl; return false;
+    if (pos == 0 || pos > 64) {std::cerr << "Local part is too long." << std::endl; return false;}
+
+    std::string localPart = email.substr('@', pos);
+    for (unsigned char c : localPart)
+        if (!isalnum(c) && c != '.' && c != '_' && c != '-' && c != '+') {std::cerr<< "Invalid charactesr in email address" << std::endl; return false;}
+    if (!isalnum((unsigned char)(localPart.front())) || !isalnum((unsigned char)(localPart.back()))) return false;
     // no consecutive dots anywhere
     if (email.find("..") != std::string::npos) return false;
     if (email.empty()) return false;
 
     std::string domain = email.substr(pos + 1);
-
-    if (domain.find('.') == std::string::npos) return false;
     // no repetition of @
     if (domain.find('@') != std::string::npos) return false;
     if (domain.empty() || domain.length() > 253) return false;
     // Contain at least 1 dot
     if (domain.find('.') == std::string::npos) return false;
     if (domain.front() == '.' || domain.back() == '.') return false;
-    if (domain.front() == '-' || domain.front() == '-') return false;
+    if (domain.front() == '-' || domain.back() == '-') return false;
 
-    size_t lastDot = domain.find_last_not_of('.');
+    size_t lastDot = domain.find_last_of('.');
     std::string tld = domain.substr(lastDot + 1);
     if (tld.length() < 2) return false;
+    for (unsigned char ch : tld)
+        if (!isalpha(ch)) return false;
     return true;
 }
 
 bool userValidation(std::string &user)
-{
-    
+{   
+    std::string cleanedUser = trim(user);
+    if (cleanedUser.empty() || cleanedUser.length() > 50 || cleanedUser.length() < 3) return false;
+    // Ensure at least 1 letter
+    bool letter = false;
+    for (unsigned char ch : cleanedUser)
+    {
+        if (isalpha(ch)) letter = true; break;
+    }
+    // Character validation
+    for (unsigned char c : cleanedUser)
+        if (!isalnum(c) && c != '-' && c!= '_') return false;
+    if (!isalnum(cleanedUser[0])) return false;
+    return true;
 }
 
 bool Register()
@@ -58,16 +77,13 @@ bool Register()
     {
         while (true)
         {
-            std::cout << "Email address: ";
-            std::getline(std::cin, email);
-
+            std::cout << "Email address (enter 'e' or 'c' to exit): ";
             if (!std::getline(std::cin, email))
             {
-                if (std::cin.eof()) std::cout << "Input cancelled." << std::endl; handlEscape();
+                if (std::cin.eof()) {std::cout << "Input cancelled." << std::endl; handlEscape();}
             }
-
             email = trim(email);
-
+            if (email == "e" || email == "c") {handlEscape();}
             if (!emailValidation(email)) std::cerr << "Invalid email address." << std::endl;
             else break;
         }
