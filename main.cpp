@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <termios.h>
+#include <unistd.h>
 
 struct User
 {
@@ -23,6 +25,32 @@ std::string trim(std::string &s)
 
 struct escapeException{};
 void handlEscape() {throw escapeException();}
+
+std::string hashedPassword(std::string& password)
+{
+    return BCrypt::generateHash(password);
+}
+
+bool verifyPassword(std::string& password, std::string& hash)
+{
+    return BCrypt::validatePassword(password, hash);
+}
+
+std::string getPasswordHidden() 
+{
+    std::string password;
+    termios oldt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    termios newt = oldt;
+    newt.c_lflag &= ~ECHO;  // Disable echo
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    
+    std::getline(std::cin, password);
+    
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);  // Restore echo
+    std::cout << std::endl;  // New line after hidden input
+    return password;
+}
 
 const std::string creds_file = "stored-creds.txt";
 
@@ -179,8 +207,31 @@ bool Register(std::vector<User>& users)
 
         while (true)
         {
-
+            std::cout << "Password: ";
+            password = getPasswordHidden();
+            if (!std::getline(std::cin, password))
+            {
+                if (std::cin.eof()){ std::cout << "Input cancelled" << std::endl; handlEscape(); }
+            }
+            if (password.length() < 20) {std::cout << "Password must be at least 20 characters" << std::endl; continue;}
+            break;
         }
+
+        User newUser;
+        newUser.username = username;
+        newUser.email = email;
+        newUser.password = password;
+        users.push_back(newUser);
+        // Save to file immediately
+        if (saveUserToFile(newUser))
+        {
+            std::cout << "Registration successful" << std::endl;
+            return true;
+        }
+        // Failed file save, remove new user from vector
+        users.pop_back();
+        std::cerr << "Error: Failed to save credentials" << std::endl;
+        return false;
     }
     catch (const std::exception& e)
     {
@@ -194,13 +245,60 @@ bool Register(std::vector<User>& users)
 
 bool login(std::vector<User>& users)
 {
-
+    try
+    {
+        std::string identifier;
+        std::string password;
+        std::cout << "Enter username or email ('e' or 'c' to quit): ";
+        if(!std::getline(std::cin, identifier))
+        {
+            if (std::cin.eof()) { std::cout << "Input cancelled" << std::endl; handlEscape(); }
+        }
+        identifier = trim(identifier);
+        if (identifier == "e" || identifier == "c") { handlEscape(); }
+        
+       int foundIndex = -1;
+       for (size_t i = 0; i < users.size(); i++)
+       {
+            if (users[i].email == identifier || users[i].username == identifier) foundIndex = i; 
+            break;
+       }
+       if (foundIndex == -1) { std::cerr << "Username or email not found." << std::endl; return false;}
+       while (true)
+        {
+            std::cout << "Password: ";
+            if (!std::getline(std::cin, password)) 
+            {
+                if (std::cin.eof()) { std::cout << "Input cancelled" << std::endl; handlEscape(); }
+            }
+            for (User& user : users)
+            {
+                if (user.email == identifier || user.username == identifier)
+                {
+                    if (verifyPassword(password, user.password))
+                    {
+                        std::cout << "Login successful!" << std::endl;
+                        std::cout << "Welcome back, " << user.username << "!" << std::endl;
+                        return true;
+                    }
+                    std::cerr << "Incorrect password." << std::endl;
+                }
+            }
+        }
+    }
+    catch (const escapeException& e)
+    {
+        std::cout << "Login cancelled." << std::endl;
+        return false;
+    }
 }
 
+// return menu when user wants to quit the operation
 void menu()
 {
     std::cout << "=================================Authentication Program=================================" << std::endl;
     std::cout << "\n1. Register\n2. Login\n3. Quit" << std::endl;
+    std::cout << "choice";
 }
 
 int main()
