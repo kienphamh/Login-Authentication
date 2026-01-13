@@ -4,9 +4,10 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <vector>
 #include <termios.h>
 #include <unistd.h>
+#include <vector>
+#include <limits>
 
 struct User
 {
@@ -303,6 +304,37 @@ void menu()
 
 int main()
 {
-
+    std::vector<User> users = loadUsersFromFile();
+    int choice;
+    while (true)
+    {
+        menu();
+        std::string input;
+        if (!std::getline(std::cin, input))
+        {
+            if (std::cin.eof()) { std::cout << "Program has been terminated." << std::endl; return 0;}
+        }
+        try
+        {
+            std::stoi(input);
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << "Please enter a number." << std::endl;
+            continue;
+        }
+        
+        switch (std::stoi(input))
+        {
+        case 1: Register(users);
+            break;
+        case 2: login(users);
+            break;
+        case 3: std::cout << "Program has been quit" << std::endl;
+            return 0;
+        default:
+            std::cerr << "Invalid choice, please enter a valid option from the menu." << std::endl;
+        }
+    }
     return 0;
 }
