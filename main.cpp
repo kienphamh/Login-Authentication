@@ -46,7 +46,15 @@ std::string getPasswordHidden()
     newt.c_lflag &= ~ECHO;  // Disable echo
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
     
-    std::getline(std::cin, password);
+    if (!std::getline(std::cin, password))
+    {
+        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+        if (std::cin.eof())
+        {
+            std::cout << "\nInput cancelled." << std::endl;
+            handlEscape();
+        }
+    }
     
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);  // Restore echo
     std::cout << std::endl;  // New line after hidden input
@@ -210,10 +218,7 @@ bool Register(std::vector<User>& users)
         {
             std::cout << "Password: ";
             password = getPasswordHidden();
-            if (!std::getline(std::cin, password))
-            {
-                if (std::cin.eof()){ std::cout << "Input cancelled" << std::endl; handlEscape(); }
-            }
+            if (password == "e" || password == "c") { handlEscape(); } 
             if (password.length() < 20) {std::cout << "Password must be at least 20 characters" << std::endl; continue;}
             break;
         }
@@ -221,7 +226,7 @@ bool Register(std::vector<User>& users)
         User newUser;
         newUser.username = username;
         newUser.email = email;
-        newUser.password = password;
+        newUser.password = hashedPassword(password);
         users.push_back(newUser);
         // Save to file immediately
         if (saveUserToFile(newUser))
@@ -234,13 +239,15 @@ bool Register(std::vector<User>& users)
         std::cerr << "Error: Failed to save credentials" << std::endl;
         return false;
     }
-    catch (const std::exception& e)
+    catch (const escapeException& e)
     {
-        std::cout << "\nRegistration cancelled" << std::endl;
+        std::cout << "Registration cancelled" << std::endl;
+        return false;
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error: " << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
     }
 }
 
@@ -261,30 +268,25 @@ bool login(std::vector<User>& users)
        int foundIndex = -1;
        for (size_t i = 0; i < users.size(); i++)
        {
-            if (users[i].email == identifier || users[i].username == identifier) foundIndex = i; 
-            break;
+            if (users[i].email == identifier || users[i].username == identifier) 
+            {
+                foundIndex = i; 
+                break;
+            }
        }
        if (foundIndex == -1) { std::cerr << "Username or email not found." << std::endl; return false;}
+       User& user = users[foundIndex];
        while (true)
         {
             std::cout << "Password: ";
-            if (!std::getline(std::cin, password)) 
+            password = getPasswordHidden();
+            if (verifyPassword(password, user.password))
             {
-                if (std::cin.eof()) { std::cout << "Input cancelled" << std::endl; handlEscape(); }
+                std::cout << "Login successful!" << std::endl;
+                std::cout << "Welcome back, " << user.username << "!" << std::endl;
+                return true;
             }
-            for (User& user : users)
-            {
-                if (user.email == identifier || user.username == identifier)
-                {
-                    if (verifyPassword(password, user.password))
-                    {
-                        std::cout << "Login successful!" << std::endl;
-                        std::cout << "Welcome back, " << user.username << "!" << std::endl;
-                        return true;
-                    }
-                    std::cerr << "Incorrect password." << std::endl;
-                }
-            }
+            std::cerr << "Incorrect password." << std::endl;
         }
     }
     catch (const escapeException& e)

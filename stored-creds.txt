@@ -1,0 +1,2 @@
+
+John:mail@example.com:$2a$12$ckqc/DtzOoS6rRBUtil2huv7m8eVdZRUgE5Ac.t/eMiEWv/F9Qi/C
