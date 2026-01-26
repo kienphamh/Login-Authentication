@@ -301,7 +301,7 @@ void menu()
 {
     std::cout << "=================================Authentication Program=================================" << std::endl;
     std::cout << "\n1. Register\n2. Login\n3. Quit" << std::endl;
-    std::cout << "choice";
+    std::cout << "choice: ";
 }
 
 int main()

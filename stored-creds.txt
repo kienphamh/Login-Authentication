@@ -1,2 +1,2 @@
-
 John:mail@example.com:$2a$12$ckqc/DtzOoS6rRBUtil2huv7m8eVdZRUgE5Ac.t/eMiEWv/F9Qi/C
+Alice:example@mail.com:$2a$12$CI7Qtm6ax2KQWczmV0yS2uG6PNr/zd/UzZt7gHPRi8nvV/xPnZ.7u
